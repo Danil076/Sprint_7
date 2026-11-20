@@ -1,6 +1,7 @@
 import allure
+import pytest
 from api import login_courier
-from data import generate_random_string
+from helpers import generate_random_string
 from expected import Expected
 
 
@@ -52,7 +53,6 @@ class TestLoginCourier:
         "Ожидаем HTTP-статус 404 и сообщение 'Учетная запись не найдена'."
     )
     def test_login_courier_wrong_password(self, registered_courier):
-
         payload = {
             "login": registered_courier["login"],
             "password": "wrong_password",
@@ -79,7 +79,6 @@ class TestLoginCourier:
         "Ожидаем HTTP-статус 404 и сообщение 'Учетная запись не найдена'."
     )
     def test_login_courier_non_existent_user(self):
-
         payload = {
             "login": "non_existent_" + generate_random_string(),
             "password": generate_random_string(),
@@ -106,7 +105,6 @@ class TestLoginCourier:
         "Ожидаем HTTP-статус 400 и сообщение о недостатке данных для входа."
     )
     def test_login_courier_missing_login(self):
-
         payload = {
             "password": generate_random_string(),
         }
@@ -115,6 +113,40 @@ class TestLoginCourier:
 
         assert response.status_code == Expected.BAD_REQUEST, (
             f"Ожидался статус {Expected.BAD_REQUEST} при отсутствии поля login, "
+            f"но получен {response.status_code}. "
+            f"Тело ответа: {response.text}"
+        )
+
+        assert response.json() == Expected.LOGIN_MISSING_REQUIRED_FIELD_ERROR, (
+            f"Ожидалось тело {Expected.LOGIN_MISSING_REQUIRED_FIELD_ERROR}, "
+            f"но получено {response.json()}. "
+            f"Тело ответа как текст: {response.text}"
+        )
+
+    @allure.story("Авторизация без обязательного поля password")
+    @allure.title("Ошибка при отсутствии password")
+    @allure.description(
+        "Отправляем запрос на логин без поля password. "
+        "По документации ожидается HTTP-статус 400 и сообщение о недостатке данных для входа. "
+        "На текущем стенде этот запрос может возвращать 504 или timeout, "
+        "поэтому тест помечен как ожидаемо падающий."
+    )
+    @pytest.mark.xfail(
+        reason=(
+            "Стенд может возвращать 504 или timeout при запросе без password. "
+            "Если в Postman подтвердился стабильный статус 400, удали этот декоратор."
+        ),
+        strict=False,
+    )
+    def test_login_courier_missing_password(self, registered_courier):
+        payload = {
+            "login": registered_courier["login"],
+        }
+
+        response = login_courier(payload)
+
+        assert response.status_code == Expected.BAD_REQUEST, (
+            f"Ожидался статус {Expected.BAD_REQUEST} при отсутствии поля password, "
             f"но получен {response.status_code}. "
             f"Тело ответа: {response.text}"
         )

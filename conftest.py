@@ -6,7 +6,7 @@ from api import (
     create_order,
     cancel_order,
 )
-from data import build_courier_payload, build_order_payload
+from helpers import build_courier_payload, build_order_payload, build_color_label
 from expected import Expected
 
 def _login_and_get_courier_id(login, password):
@@ -80,6 +80,7 @@ def registered_courier():
         pytest.skip(
             f"Не удалось отправить запрос на создание тестового курьера: {exc}"
         )
+        return
 
     if create_response.status_code != Expected.CREATED:
         pytest.skip(
@@ -87,6 +88,7 @@ def registered_courier():
             f"Статус: {create_response.status_code}. "
             f"Тело ответа: {create_response.text}"
         )
+        return
 
     courier_id = _login_and_get_courier_id(
         payload["login"],
@@ -97,6 +99,7 @@ def registered_courier():
         pytest.skip(
             "Курьер был создан, но не удалось получить его id через логин."
         )
+        return
 
     yield {
         "login": payload["login"],
@@ -111,6 +114,7 @@ def registered_courier():
 def created_order_response(request):
     # Фикстура: создаёт заказ до теста и пытается отменить его после теста
     color = request.param
+    color_label = build_color_label(color)
 
     payload = build_order_payload(color)
 
@@ -120,20 +124,22 @@ def created_order_response(request):
         pytest.skip(
             f"Не удалось создать тестовый заказ: {exc}"
         )
+        return
+
+    try:
+        body = response.json()
+    except Exception:
+        body = {}
+
+    if not isinstance(body, dict):
+        body = {}
 
     yield {
-        "color": color,
         "response": response,
+        "body": body,
+        "color_label": color_label,
     }
 
     if response.status_code == Expected.CREATED:
-        try:
-            body = response.json()
-        except Exception:
-            body = {}
-
-        if not isinstance(body, dict):
-            body = {}
-
         track = body.get(Expected.ORDER_CREATE_SUCCESS_TRACK_KEY)
         _try_cancel_order(track)

@@ -64,6 +64,11 @@ class TestCreateCourier:
         )
 
     @allure.story("Создание курьера без обязательных полей login и password")
+    @allure.title("Ошибка при отсутствии обязательного поля")
+    @allure.description(
+        "Проверяем, что при создании курьера без обязательного поля "
+        "сервер возвращает HTTP-статус 400 и сообщение о недостатке данных."
+    )
     @pytest.mark.parametrize(
         "missing_field",
         [

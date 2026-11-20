@@ -9,6 +9,12 @@ from expected import Expected
 class TestCreateOrder:
 
     @allure.story("Создание заказа с разными вариантами цвета")
+    @allure.title("Создание заказа с разными вариантами цвета")
+    @allure.description(
+        "Создаём заказ с разными вариантами цвета: без цвета, только BLACK, "
+        "только GREY, оба цвета. Проверяем, что сервер возвращает HTTP-статус 201 "
+        "и поле track типа int."
+    )
     @pytest.mark.parametrize(
         "created_order_response",
         [
@@ -26,36 +32,18 @@ class TestCreateOrder:
         ],
     )
     def test_create_order_color_options(self, created_order_response):
-        color = created_order_response["color"]
-        response = created_order_response["response"]
-
-        if color is None:
-            color_label = "без цвета"
-        else:
-            color_label = ", ".join(color)
-
         allure.dynamic.title(
-            f"Создание заказа: вариант цвета {color_label}"
+            f"Создание заказа: вариант цвета {created_order_response['color_label']}"
         )
 
-        allure.dynamic.description(
-            "Создаём заказ с указанным вариантом цвета и проверяем, "
-            "что сервер возвращает HTTP-статус 201 и поле track типа int."
-        )
+        response = created_order_response["response"]
+        body = created_order_response["body"]
 
         assert response.status_code == Expected.CREATED, (
             f"Ожидался статус {Expected.CREATED} при создании заказа, "
             f"но получен {response.status_code}. "
             f"Тело ответа: {response.text}"
         )
-
-        try:
-            body = response.json()
-        except Exception:
-            pytest.fail(
-                f"Ответ не является валидным JSON. "
-                f"Тело ответа: {response.text}"
-            )
 
         assert Expected.ORDER_CREATE_SUCCESS_TRACK_KEY in body, (
             f"В ответе отсутствует ключ '{Expected.ORDER_CREATE_SUCCESS_TRACK_KEY}'. "
